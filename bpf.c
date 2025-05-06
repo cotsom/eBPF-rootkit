@@ -292,7 +292,7 @@ int xdp_pass(struct xdp_md *ctx){
     //GET TCP DATA
     unsigned char *tcpdata = (unsigned char *)tcp + tcp_header_bytes;
 
-    if ((void *)(tcpdata + 27) > data_end) {
+    if ((void *)(tcpdata + 30) > data_end) {
         return XDP_PASS;
     }
 
