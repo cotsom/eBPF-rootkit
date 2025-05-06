@@ -76,7 +76,7 @@ lolkek 192.168.123.200 4444 #27 characters
 //GET TCP DATA
 unsigned char *tcpdata = (unsigned char *)tcp + tcp_header_bytes;
 
-if ((void *)(tcpdata + 27) > data_end) {
+if ((void *)(tcpdata + 27) > data_end) { // <---
     return XDP_PASS;
 }
 
@@ -88,7 +88,7 @@ if (!ringbuf_space) {
 
 // Copy the TCP header bytes into the ring buffer
 // Using a loop to ensure compliance with eBPF verifier
-for (int i = 0; i < 27; i++) {
+for (int i = 0; i < 27; i++) { // <---
     unsigned char byte = *((unsigned char *)tcpdata + i);
     ((unsigned char *)ringbuf_space)[i] = byte;
 }
