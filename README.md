@@ -3,9 +3,9 @@ This project was made for research and practice with eBPF
 
 This repository contains an eBPF rootkit that combines 2 main functions:
 
-Backdoor for remote access - uses `XDP` (eXpress Data Path) to monitor network traffic and launch a reverse shell when detecting a specific pattern in packets.
+* Backdoor for remote access - uses `XDP` (eXpress Data Path) to monitor network traffic and launch a reverse shell when detecting a specific pattern in packets.
 
-Process Hiding - uses eBPF programs attached to the `getdents64` system call to hide specific processes from `ps`, `htop`, `ls` etc.
+* Process Hiding - uses eBPF programs attached to the `getdents64` system call to hide specific processes from `ps`, `htop`, `ls` etc.
 
 The process hiding part is taken from the [bad-bpf repository](https://github.com/pathtofile/bad-bpf/), but the loader has been rewritten in Go.
 
