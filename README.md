@@ -22,7 +22,10 @@ To build and run the project, you will need:
 # Installing dependencies on Ubuntu/Debian:
 
 sudo apt update  
-sudo apt install -y clang llvm libbpf-dev linux-headers-$(uname -r)  
+sudo apt install -y clang llvm libbpf-dev linux-headers-$(uname -r)
+# install bpftool
+sudo apt install linux-tools-common linux-tools-generic linux-tools-$(uname -r)  
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 go get github.com/cilium/ebpf
 
 # Building
