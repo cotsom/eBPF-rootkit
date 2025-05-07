@@ -1,5 +1,5 @@
 # eBPF-rootkit
-This project was done for research and practice with eBPF
+This project was made for research and practice with eBPF
 
 This repository contains an eBPF rootkit that combines 2 main functions:
 
