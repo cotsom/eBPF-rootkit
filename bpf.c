@@ -245,13 +245,18 @@ static bool is_tcp(struct ethhdr *eth, void *data_end){
 }
 
 SEC("xdp")
-int xdp_pass(struct xdp_md *ctx){
+int xdp_pass(struct xdp_md *ctx) {
     // Pointers to packet data
     void *data = (void *)(long)ctx->data;
     void *data_end = (void *)(long)ctx->data_end;
 
     // Parse Ethernet header
     struct ethhdr *eth = data;
+
+    // Ensure Ethernet header is within bounds
+    if ((void *)(eth + 1) > data_end) {
+        return XDP_PASS;
+    }
 
     // Check if the packet is a TCP packet
     if (!is_tcp(eth, data_end)) {
@@ -280,39 +285,68 @@ int xdp_pass(struct xdp_md *ctx){
         return XDP_PASS;
     }
 
-    // Define the number of bytes you want to capture from the TCP header
-    const int tcp_header_bytes = 32;
-
-    // Ensure that the desired number of bytes does not exceed packet bounds
-    if ((void *)tcp + tcp_header_bytes > data_end) {
+    // Dynamically calculate TCP header length (including options like Timestamps)
+    int real_tcp_hdr_len = tcp->doff * 4;
+    if (real_tcp_hdr_len < sizeof(struct tcphdr)) {
         return XDP_PASS;
     }
 
-    //GET TCP DATA
-    unsigned char *tcpdata = (unsigned char *)tcp + tcp_header_bytes;
+    // Find the start of the actual TCP payload
+    unsigned char *payload_start = (unsigned char *)tcp + real_tcp_hdr_len;
 
-    if ((void *)(tcpdata + 27) > data_end) {
+    // Mandatory check for eBPF verifier: ensure payload_start is not beyond data_end
+    if ((void *)payload_start > data_end) {
         return XDP_PASS;
     }
 
-    // Reserve space in the ring buffer
-    void *ringbuf_space = bpf_ringbuf_reserve(&xdprb, tcp_header_bytes, 0);
+    // Calculate actual payload length available in the packet
+    int payload_len = (int)((void *)data_end - (void *)payload_start);
+
+    // Skip if payload is too small to contain a meaningful trigger
+    if (payload_len < 7) { 
+        return XDP_PASS; 
+    }
+
+    // Define maximum buffer size to capture (safe limit for Go parsing)
+    #define MAX_COPY 64
+    
+    // Determine how many bytes we can actually copy
+    int copy_size = payload_len > MAX_COPY ? MAX_COPY : payload_len;
+
+    // Reserve space in the Ring Buffer for userspace processing
+    // Using a fixed size (MAX_COPY) to keep the verifier happy
+    void *ringbuf_space = bpf_ringbuf_reserve(&xdprb, MAX_COPY, 0);
     if (!ringbuf_space) {
-        return XDP_PASS;  // If reservation fails, skip processing
+        return XDP_PASS;
     }
 
-    // Copy the TCP header bytes into the ring buffer
-    // Using a loop to ensure compliance with eBPF verifier
-    for (int i = 0; i < 27; i++) {
-        unsigned char byte = *((unsigned char *)tcpdata + i);
-        ((unsigned char *)ringbuf_space)[i] = byte;
+    // Clear memory to avoid sending kernel junk to userspace
+    __builtin_memset(ringbuf_space, 0, MAX_COPY);
+
+    // Set up source and destination pointers for the copy loop
+    unsigned char *src = payload_start;
+    unsigned char *dst = (unsigned char *)ringbuf_space;
+
+    // Perform safe byte-by-byte copy
+    for (int i = 0; i < MAX_COPY; i++) {
+        // Exit loop if we reached the end of the actual payload or buffer limit
+        if (i >= copy_size) {
+            break;
+        }
+        
+        // Critical verifier check: ensure next byte is within the packet boundaries
+        if ((void *)(src + i + 1) > data_end) {
+            break;
+        }
+
+        dst[i] = src[i];
     }
 
-    // Submit the data to the ring buffer
+    // Submit captured data to the Go application
     bpf_ringbuf_submit(ringbuf_space, 0);
 
-    // Optional: Print a debug message
-    bpf_printk("Captured TCP header (%d bytes)", tcp_header_bytes);
+    // Debug print for tracing (use: cat /sys/kernel/debug/tracing/trace_pipe)
+    bpf_printk("Captured TCP payload: %d bytes", copy_size);
 
     return XDP_PASS;
 }
